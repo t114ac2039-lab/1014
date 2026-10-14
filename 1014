@@ -1,0 +1,120 @@
+const int buttonPin = 2;  // the number of the pushbutton pin
+const int RledPin = 3;    // the number of the R pin (PWM)
+const int GledPin = 4;    // the number of the G pin (PWM)
+const int BledPin = 5;    // the number of the B pin (PWM)
+
+// variables will change:
+int buttonState = 0;      // variable for reading the pushbutton status
+int ledcolor = 0;         // 0~8 模式切換
+
+bool ButtonPressed = false;
+
+// 炫彩效果用的變數 (使用 millis 時間控制，避免卡死按鈕讀取)
+unsigned long previousRainbowMillis = 0;
+const long rainbowInterval = 20; // 漸變速度 (毫秒)，數值越小變色越快
+int hueStep = 0;                 // 0 ~ 767 的彩虹色階
+
+void setup() {
+  pinMode(RledPin, OUTPUT);
+  pinMode(GledPin, OUTPUT);
+  pinMode(BledPin, OUTPUT);
+  // initialize the pushbutton pin as an input:
+  pinMode(buttonPin, INPUT);
+}
+
+void loop() {
+  // read the state of the pushbutton value:
+  buttonState = digitalRead(buttonPin);
+
+  // 當按鈕按下且先前未按過時觸發
+  if (buttonState == HIGH && !ButtonPressed) {
+    ledcolor = (ledcolor + 1) % 9;  // 增加到 9 種模式 (0 ~ 8 循環)
+    ButtonPressed = true;
+    delay(20);                       // 簡單去抖動 (Debounce)
+  }
+
+  // 按鈕放開時重置狀態
+  if (buttonState == LOW && ButtonPressed) {
+    ButtonPressed = false;
+    delay(20);                       // 放開時的去抖動
+  }
+
+  // 根據 ledcolor 顯示對應顏色 (針對共陽極 RGB LED，LOW/0 為亮、HIGH/255 為暗)
+  if (ledcolor == 0) {
+    // 全關 (全暗)
+    digitalWrite(RledPin, HIGH);
+    digitalWrite(GledPin, HIGH);
+    digitalWrite(BledPin, HIGH);
+  }
+  else if (ledcolor == 1) {
+    // 紅色 (Red)
+    digitalWrite(RledPin, LOW);
+    digitalWrite(GledPin, HIGH);
+    digitalWrite(BledPin, HIGH);
+  }
+  else if (ledcolor == 2) {
+    // 綠色 (Green)
+    digitalWrite(RledPin, HIGH);
+    digitalWrite(GledPin, LOW);
+    digitalWrite(BledPin, HIGH);
+  }
+  else if (ledcolor == 3) {
+    // 藍色 (Blue)
+    digitalWrite(RledPin, HIGH);
+    digitalWrite(GledPin, HIGH);
+    digitalWrite(BledPin, LOW);
+  }
+  else if (ledcolor == 4) {
+    // 黃色 (Yellow = Red + Green)
+    digitalWrite(RledPin, LOW);
+    digitalWrite(GledPin, LOW);
+    digitalWrite(BledPin, HIGH);
+  }
+  else if (ledcolor == 5) {
+    // 紫色 (Purple = Red + Blue)
+    digitalWrite(RledPin, LOW);
+    digitalWrite(GledPin, HIGH);
+    digitalWrite(BledPin, LOW);
+  }
+  else if (ledcolor == 6) {
+    // 青色/藍綠色 (Cyan = Green + Blue)
+    digitalWrite(RledPin, HIGH);
+    digitalWrite(GledPin, LOW);
+    digitalWrite(BledPin, LOW);
+  }
+  else if (ledcolor == 7) {
+    // 白色 (White = Red + Green + Blue)
+    digitalWrite(RledPin, LOW);
+    digitalWrite(GledPin, LOW);
+    digitalWrite(BledPin, LOW);
+  }
+  else if (ledcolor == 8) {
+    // 【新增】炫彩漸變效果 (Rainbow Cycle)
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousRainbowMillis >= rainbowInterval) {
+      previousRainbowMillis = currentMillis;
+      
+      hueStep = (hueStep + 1) % 768; // 在 768 個色彩階調中循環
+      
+      int r, g, b;
+      if (hueStep < 256) {
+        r = 255 - hueStep;
+        g = hueStep;
+        b = 0;
+      } else if (hueStep < 512) {
+        r = 0;
+        g = 255 - (hueStep - 256);
+        b = hueStep - 256;
+      } else {
+        r = hueStep - 512;
+        g = 0;
+        b = 255 - (hueStep - 512);
+      }
+      
+      // 共陽極 LED：反轉 PWM 數值 (255 - 值)
+      analogWrite(RledPin, 255 - r);
+      analogWrite(GledPin, 255 - g);
+      analogWrite(BledPin, 255 - b);
+    }
+  }
+}
